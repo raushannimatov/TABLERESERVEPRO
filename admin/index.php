@@ -31,6 +31,7 @@ $cancelled = mysqli_fetch_assoc($cancelled_query)['total'];
 if(!isset($_SESSION['admin'])){
 
     header("Location: login.php");
+    exit();
 
 }
 
@@ -118,15 +119,15 @@ $result = mysqli_query($conn, $sql);
 
                 <tr>
 
-                    <td><?php echo $row['name']; ?></td>
+                    <td><?php echo htmlspecialchars($row['name']); ?></td>
 
-                    <td><?php echo $row['email']; ?></td>
+                    <td><?php echo htmlspecialchars($row['email']); ?></td>
 
-                    <td><?php echo $row['reservation_date']; ?></td>
+                    <td><?php echo htmlspecialchars($row['reservation_date']); ?></td>
 
-                    <td><?php echo $row['reservation_time']; ?></td>
+                    <td><?php echo htmlspecialchars($row['reservation_time']); ?></td>
 
-                    <td><?php echo $row['persons']; ?></td>
+                    <td><?php echo htmlspecialchars($row['persons']); ?></td>
 
                     <td>
 
@@ -142,11 +143,11 @@ $result = mysqli_query($conn, $sql);
 
                     ON reservation_items.menu_item_id = menu_items.id
 
-                    WHERE reservation_items.reservation_id = ".$row['id']);
+                    WHERE reservation_items.reservation_id = ".(int)$row['id']);
 
                     while($dish = mysqli_fetch_assoc($dishes_query)){
 
-                        echo "- " . $dish['name'] . "<br>";
+                        echo "- " . htmlspecialchars($dish['name']) . "<br>";
 
                     }
 
@@ -180,17 +181,17 @@ $result = mysqli_query($conn, $sql);
 
                     <td class="actions">
 
-                        <a href="update-status.php?id=<?php echo $row['id']; ?>&status=accepted"
+                        <a href="update-status.php?id=<?php echo (int)$row['id']; ?>&status=accepted"
                         class="accept-btn">
                             Accept
                         </a>
 
-                        <a href="update-status.php?id=<?php echo $row['id']; ?>&status=cancelled"
+                        <a href="update-status.php?id=<?php echo (int)$row['id']; ?>&status=cancelled"
                         class="cancel-btn">
                             Cancel
                         </a>
 
-                        <a href="delete-reservation.php?id=<?php echo $row['id']; ?>"
+                        <a href="delete-reservation.php?id=<?php echo (int)$row['id']; ?>"
                         class="delete-btn">
                             Delete
                         </a>

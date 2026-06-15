@@ -6,27 +6,41 @@ include '../config/database.php';
 
 if(isset($_POST['login'])){
 
-    $username = $_POST['username'];
+    $username = trim($_POST['username']);
     $password = $_POST['password'];
 
-    $sql = "SELECT * FROM admins
-    WHERE username='$username'
-    AND password='$password'";
+    $stmt = mysqli_prepare(
+        $conn,
+        "SELECT * FROM admins WHERE username = ?"
+    );
 
-    /** @var mysqli $conn */
-    $result = mysqli_query($conn, $sql);
+    mysqli_stmt_bind_param(
+        $stmt,
+        "s",
+        $username
+    );
 
-    if(mysqli_num_rows($result) > 0){
+    mysqli_stmt_execute($stmt);
 
-        $_SESSION['admin'] = $username;
+    $result = mysqli_stmt_get_result($stmt);
 
-        header("Location: index.php");
+    if($admin = mysqli_fetch_assoc($result)){
 
-    }else{
+        if(password_verify(
+            $password,
+            $admin['password']
+        )){
+            session_regenerate_id(true);
+            $_SESSION['admin'] = $admin['username'];
 
-        $error = "Invalid login credentials.";
+            header("Location: index.php");
+            exit();
+
+        }
 
     }
+
+    $error = "Invalid login credentials.";
 
 }
 

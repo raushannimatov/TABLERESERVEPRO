@@ -1,15 +1,40 @@
 <?php
 
+session_start();
+
+if(!isset($_SESSION['admin'])){
+
+    header("Location: login.php");
+    exit();
+
+}
+
 include '../config/database.php';
 
-$id = $_GET['id'];
+$id = (int) $_GET['id'];
 
-$sql = "DELETE FROM reservations
-WHERE id='$id'";
+$stmt = mysqli_prepare(
 
-/** @var mysqli $conn */
-mysqli_query($conn, $sql);
+    $conn,
+
+    "DELETE FROM reservations
+    WHERE id = ?"
+
+);
+
+mysqli_stmt_bind_param(
+
+    $stmt,
+
+    "i",
+
+    $id
+
+);
+
+mysqli_stmt_execute($stmt);
 
 header("Location: index.php");
+exit();
 
 ?>
