@@ -3,7 +3,13 @@
 include '../includes/header.php';
 include '../config/database.php';
 
-$date = $_GET['date'];
+$date = $_GET['date'] ?? '';
+
+if(!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)){
+
+    die("Invalid date.");
+
+}
 
 $timeslots = [
     "17:00",
@@ -29,7 +35,7 @@ $max_capacity = 20;
 
     <strong>
 
-        <?php echo $date; ?>
+        <?php echo htmlspecialchars($date); ?>
 
     </strong>
 
@@ -38,29 +44,44 @@ $max_capacity = 20;
 <div class="timeslot-grid">
 
     <?php foreach($timeslots as $slot) : ?>
-
-        <?php
-
-        $sql = "
-
-        SELECT SUM(persons) AS total_persons
-
-        FROM reservations
-
-        WHERE reservation_date='$date'
-        AND reservation_time='$slot'
-        AND status != 'cancelled'
-
-        ";
+    <?php
 
         /** @var mysqli $conn */
-        $result = mysqli_query($conn, $sql);
+        $stmt = mysqli_prepare(
+
+    $conn,
+
+    "SELECT SUM(persons) AS total_persons
+
+    FROM reservations
+
+    WHERE reservation_date = ?
+    AND reservation_time = ?
+    AND status != 'cancelled'"
+
+);
+
+mysqli_stmt_bind_param(
+
+    $stmt,
+
+    "ss",
+
+    $date,
+
+    $slot
+
+);
+
+mysqli_stmt_execute($stmt);
+
+$result = mysqli_stmt_get_result($stmt);
 
         $data = mysqli_fetch_assoc($result);
 
         $total_persons = $data['total_persons'] ?? 0;
 
-        if($total_persons >= 20){
+        if($total_persons >= $max_capacity){
 
             $status = "FULL";
 
@@ -80,7 +101,7 @@ $max_capacity = 20;
 
             <a
 
-            href="booking.php?date=<?php echo $date; ?>&time=<?php echo $slot; ?>"
+            href="booking.php?date=<?php echo urlencode($date); ?>&time=<?php echo urlencode($slot); ?>"
 
             class="timeslot-card">
 

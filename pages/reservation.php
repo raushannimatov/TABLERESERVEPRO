@@ -17,13 +17,22 @@ $max_capacity = 20;
 
 $calendar_days = [];
 
-for ($i = 0; $i < 30; $i++) {
+    for ($i = 0; $i < 30; $i++) {
 
     $current_date = date('Y-m-d', strtotime("+$i days"));
 
-    $day_name = date('l', strtotime($current_date));
-/** @var mysqli $conn */
-    $day_sql = mysqli_query($conn,"SELECT * FROM opening_daysWHERE day_name='$day_name'");
+        $day_name = date('l', strtotime($current_date));
+        /** @var mysqli $conn */
+        $stmt = mysqli_prepare(
+        $conn,
+        "SELECT * FROM opening_days WHERE day_name = ?"
+    );
+
+    mysqli_stmt_bind_param($stmt, "s", $day_name);
+
+    mysqli_stmt_execute($stmt);
+
+    $day_sql = mysqli_stmt_get_result($stmt);
 
     $day_data = mysqli_fetch_assoc($day_sql);
 
@@ -31,21 +40,37 @@ for ($i = 0; $i < 30; $i++) {
 
     foreach ($timeslots as $slot) {
 
-        $slot_sql = "
+        $stmt = mysqli_prepare(
 
-        SELECT SUM(persons) AS total_persons
+    $conn,
 
-        FROM reservations
+    "SELECT SUM(persons) AS total_persons
 
-        WHERE reservation_date='$current_date'
-        AND reservation_time='$slot'
-        AND status != 'cancelled'
+    FROM reservations
 
-        ";
+    WHERE reservation_date = ?
+    AND reservation_time = ?
+    AND status != 'cancelled'"
 
-        $slot_result = mysqli_query($conn, $slot_sql);
+);
 
-        $slot_data = mysqli_fetch_assoc($slot_result);
+mysqli_stmt_bind_param(
+
+    $stmt,
+
+    "ss",
+
+    $current_date,
+
+    $slot
+
+);
+
+mysqli_stmt_execute($stmt);
+
+$slot_result = mysqli_stmt_get_result($stmt);
+
+$slot_data = mysqli_fetch_assoc($slot_result);
 
         $total_persons = $slot_data['total_persons'] ?? 0;
 
@@ -86,18 +111,35 @@ for ($i = 0; $i < 30; $i++) {
 
                 <?php foreach($calendar_days as $calendar_day) : ?>
 
-                    <a href="timeslots.php?date=<?php echo $calendar_day['date']; ?>"
-                       class="calendar-day <?php echo $calendar_day['is_open'] ? 'open' : 'closed'; ?>">
+                    <?php if($calendar_day['is_open']) : ?>
 
-                        <span class="day-number">
-                            <?php echo $calendar_day['day']; ?>
-                        </span>
+                        <a href="timeslots.php?date=<?php echo urlencode($calendar_day['date']); ?>" class="calendar-day open">
 
-                        <span class="day-month">
-                            <?php echo $calendar_day['month']; ?>
-                        </span>
+                            <span class="day-number">
+                                <?php echo htmlspecialchars($calendar_day['day']); ?>
+                            </span>
 
-                    </a>
+                            <span class="day-month">
+                                <?php echo htmlspecialchars($calendar_day['month']); ?>
+                            </span>
+
+                        </a>
+
+                    <?php else : ?>
+
+                        <div class="calendar-day closed">
+
+                            <span class="day-number">
+                                <?php echo htmlspecialchars($calendar_day['day']); ?>
+                            </span>
+
+                            <span class="day-month">
+                                <?php echo htmlspecialchars($calendar_day['month']); ?>
+                            </span>
+
+                        </div>
+
+                    <?php endif; ?>
 
                 <?php endforeach; ?>
 

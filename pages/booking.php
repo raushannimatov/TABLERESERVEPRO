@@ -1,32 +1,73 @@
 <?php
 
+session_start();
+
+if(empty($_SESSION['csrf_token'])){
+
+    $_SESSION['csrf_token'] = bin2hex(
+        random_bytes(32)
+    );
+
+}
+
 include '../includes/header.php';
 include '../config/database.php';
 
-/** @var mysqli $conn */
-$menu_items = mysqli_query($conn,
-"SELECT * FROM menu_items
-ORDER BY category, name");
+$date = $_GET['date'] ?? '';
+if(!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)){
+    die("Invalid date.");
+}
+$time = $_GET['time'] ?? '';
+$allowed_times = [
+    "17:00",
+    "18:00",
+    "19:00",
+    "20:00",
+    "21:00"
+];
 
-$date = $_GET['date'];
-$time = $_GET['time'];
+if(!in_array($time, $allowed_times)){
+    die("Invalid time.");
+}
+
+if(empty($date) || empty($time)){
+
+    header("Location: reservation.php");
+    exit();
+
+}
 
 $max_capacity = 20;
 
-$sql = "
+$stmt = mysqli_prepare(
 
-SELECT SUM(persons) AS total_persons
+    $conn,
 
-FROM reservations
+    "SELECT SUM(persons) AS total_persons
 
-WHERE reservation_date='$date'
-AND reservation_time='$time'
-AND status != 'cancelled'
+    FROM reservations
 
-";
+    WHERE reservation_date = ?
+    AND reservation_time = ?
+    AND status != 'cancelled'"
 
-/** @var mysqli $conn */
-$result = mysqli_query($conn, $sql);
+);
+
+mysqli_stmt_bind_param(
+
+    $stmt,
+
+    "ss",
+
+    $date,
+
+    $time
+
+);
+
+mysqli_stmt_execute($stmt);
+
+$result = mysqli_stmt_get_result($stmt);
 
 $data = mysqli_fetch_assoc($result);
 
@@ -39,7 +80,7 @@ $available_seats = $max_capacity - $current_persons;
 <section class="reservation-section">
 
     <div class="reservation-container">
-        <a href="timeslots.php?date=<?php echo $date; ?>" class="back-btn">←</a>
+        <a href="timeslots.php?date=<?php echo urlencode($date); ?>" class="back-btn">←</a>
         <h1>Complete Reservation</h1>
 
         <div class="booking-summary">
@@ -48,7 +89,7 @@ $available_seats = $max_capacity - $current_persons;
 
                 <strong>Date:</strong>
 
-                <?php echo $date; ?>
+                <?php echo htmlspecialchars($date); ?>
 
             </p>
 
@@ -56,29 +97,25 @@ $available_seats = $max_capacity - $current_persons;
 
                 <strong>Time:</strong>
 
-                <?php echo $time; ?>
+                <?php echo htmlspecialchars($time); ?>
 
             </p>
 
             <p>
 
                 <strong>Available Seats:</strong>
-                <?php echo $available_seats; ?>/20
+                <?php echo htmlspecialchars($available_seats); ?>/20
 
             </p>
 
         </div>
 
         <form action="confirmation.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             <div class="dish-selector">
 
-                <button
-                type="button"
-                id="openMenuModal"
-                class="btn">
-
+                <button type="button" id="openMenuModal" class="btn">
                     Select Dishes Beforehand (Optional)
-
                 </button>
 
                 <div id="selectedCount">
@@ -94,12 +131,12 @@ $available_seats = $max_capacity - $current_persons;
             <input
             type="hidden"
             name="date"
-            value="<?php echo $date; ?>">
+            value="<?php echo htmlspecialchars($date); ?>">
 
             <input
             type="hidden"
             name="time"
-            value="<?php echo $time; ?>">
+            value="<?php echo htmlspecialchars($time); ?>">
 
             <input
             type="text"
@@ -123,7 +160,7 @@ $available_seats = $max_capacity - $current_persons;
             name="persons"
             placeholder="Number of Persons"
             min="1"
-            max="<?php echo $available_seats; ?>"
+            max="<?php echo htmlspecialchars($available_seats); ?>"
             required>
 
             <button
@@ -153,7 +190,7 @@ $available_seats = $max_capacity - $current_persons;
         <div class="menu-popup-grid">
 
             <?php
-/** @var mysqli $conn */
+            /** @var mysqli $conn */
             $starters = mysqli_query($conn,
             "SELECT * FROM menu_items
             WHERE category='Starter'
@@ -172,7 +209,7 @@ $available_seats = $max_capacity - $current_persons;
 
                     <span>
 
-                        <?php echo $item['name']; ?>
+                        <?php echo htmlspecialchars($item['name']); ?>
 
                         (€<?php echo number_format($item['price'],2); ?>)
 
@@ -211,7 +248,7 @@ $available_seats = $max_capacity - $current_persons;
 
                     <span>
 
-                        <?php echo $item['name']; ?>
+                        <?php echo htmlspecialchars($item['name']); ?>
 
                         (€<?php echo number_format($item['price'],2); ?>)
 
@@ -250,7 +287,7 @@ $available_seats = $max_capacity - $current_persons;
 
                     <span>
 
-                        <?php echo $item['name']; ?>
+                        <?php echo htmlspecialchars($item['name']); ?>
 
                         (€<?php echo number_format($item['price'],2); ?>)
 
@@ -288,7 +325,7 @@ $available_seats = $max_capacity - $current_persons;
 
                     <span>
 
-                        <?php echo $item['name']; ?>
+                        <?php echo htmlspecialchars($item['name']); ?>
 
                         (€<?php echo number_format($item['price'],2); ?>)
 
